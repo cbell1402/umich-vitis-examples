@@ -9,7 +9,7 @@
 
 typedef ap_int<6> dinA_t;
 typedef ap_int<12> dinB_t;
-typedef ap_int<22> dinc_t;
+typedef ap_int<22> dinC_t;
 typedef ap_int<33> dinD_t;
 
 typedef ap_int<18> dout1_t;
