@@ -4,7 +4,7 @@
 int main() {
     dinA_t inA;
     dinB_t inB;
-    dinc_t inC;
+    dinC_t inC;
     dinD_t inD;
     dout1_t out1;
     dout2_t out2;
