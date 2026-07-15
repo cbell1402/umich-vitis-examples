@@ -67,7 +67,8 @@ void computeNext(
 
 for_each_cell:
     for(int cell=0; cell<NUM_CELLS; cell++) {
-#pragma HLS PIPELINE II=1
+#pragma HLS UNROLL // You can unroll this instead of pipelining, which decreases latency from 61 to 11, and clock from 7.152 to 6.96,
+// BUT this increases LUTs from 17043 to 44717, AND increases FFs from 4034 to 7555.
 
         if(energy[cell] < threshold) {
             next[cell] = -1;
