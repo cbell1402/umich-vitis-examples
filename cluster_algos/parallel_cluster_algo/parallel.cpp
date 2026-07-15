@@ -52,7 +52,6 @@ const int neighborArray[NUM_CELLS][MAX_NEIGHBORS] = {
     {27, 30, 31, 43, 45, 46, -1, -1, -1, -1, -1, -1},
 };
 
-
 const data_t threshold = 0.01;
 const int MAX_ITER = 7; // This is a guesstimate for max number of neighbor relations between two cells in one module, 
 // needs to be determined for a layer.
@@ -63,6 +62,8 @@ void computeNext(
 ) {
 #pragma HLS ARRAY_PARTITION variable=energy complete
 #pragma HLS ARRAY_PARTITION variable=next complete
+#pragma HLS ARRAY_PARTITION variable=neighborArray complete dim=2 // Vitis HLS should already infer this, just have it here in case something breaks.
+// You can inline computeNext also, but it does not change latency. It only changes FFs from 4034 to 5278 and LUTs from 17068 to 16810.
 
 for_each_cell:
     for(int cell=0; cell<NUM_CELLS; cell++) {
@@ -88,7 +89,6 @@ check_neighbors:
                     bestEnergy = energy[n];
             }
         }
-
         next[cell] = best;
     }
 }
@@ -123,7 +123,7 @@ void moduleCluster2d(
 ) {
 #pragma HLS ARRAY_PARTITION variable=energy complete
 #pragma HLS ARRAY_PARTITION variable=labels complete
-// Can use dataflow, which improves latency by like 12, but also like doubles FFs and LUTs.
+// You can add dataflow, but this only decreases latency by like 3 and increases FFs and LUTs from ~4000 & 17000 to ~18000 & 25000.
 
     int next[NUM_CELLS];
 #pragma HLS ARRAY_PARTITION variable=next complete
