@@ -70,12 +70,11 @@ void clusterMaxima(
 #pragma HLS ARRAY_PARTITION variable=energy complete
 #pragma HLS ARRAY_PARTITION variable=labels complete
 #pragma HLS ARRAY_PARTITION variable=neighborArray complete dim=2 // Vitis HLS should already infer this, just have it here in case something breaks.
-// You can inline computeNext also, but it does not change latency. It only changes FFs from 4034 to 5278 and LUTs from 17068 to 16810.
 
 for_each_cell:
     for(int cell=0; cell<NUM_CELLS; cell++) {
-#pragma HLS UNROLL // You can unroll this instead of pipelining, which decreases latency from 59 to 9, clock from 6.42 to 5.441, and FFs from 3711 to 3081,
-// BUT this increases LUTs from 17043 to 44717.
+#pragma HLS UNROLL // You can unroll this instead of pipelining, which decreases latency from 48 to 0, clock from 6.817 to 5.297, and FFs from 1828 to 0,
+// BUT this increases LUTs from 4888 to 33070.
 
         if(energy[cell] < threshold) {
             labels[cell] = false;
