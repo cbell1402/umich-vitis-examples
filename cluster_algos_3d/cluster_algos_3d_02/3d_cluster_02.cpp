@@ -155,7 +155,7 @@ init:
 
 last_layer:
     for (int c=0; c < NUM_CELLS; c++) {
-#pragma HLS UNROLL
+#pragma HLS PIPELINE II=1 // Unclear if this can be unrolled; Vitis let me do it, but the logic is sequential and so it probably shouldn't have. Unrolling decreases latency by ~2.
         if (maxima[NUM_LAYERS-1][c]) {
             cluster[NUM_LAYERS-1][c] = nextID;
             nextID++;
