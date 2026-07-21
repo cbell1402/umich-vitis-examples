@@ -71,7 +71,7 @@ void clusterMaxima2d(
 ) {
 #pragma HLS ARRAY_PARTITION variable=energy complete
 #pragma HLS ARRAY_PARTITION variable=maxima complete
-#pragma HLS ARRAY_PARTITION variable=neighborArray complete dim=2 // Vitis HLS should already infer this, just have it here in case something breaks.
+#pragma HLS ARRAY_PARTITION variable=neighborArray complete dim=2
 
 for_each_cell:
     for(int cell=0; cell<NUM_CELLS; cell++) {
@@ -139,9 +139,10 @@ void cluster3d(
     bool maxima[NUM_LAYERS][NUM_CELLS],
     int cluster[NUM_LAYERS][NUM_CELLS]
 ) {
+#pragma HLS INLINE
 #pragma HLS ARRAY_PARTITION variable=maxima complete dim=2
 #pragma HLS ARRAY_PARTITION variable=cluster complete dim=2
-#pragma HLS ARRAY_PARTITION variable=neighborArray complete dim=2 // i'm not sure if this is necessary yet.
+#pragma HLS ARRAY_PARTITION variable=neighborArray complete dim=2
 
 init:
     for (int l=0; l<NUM_LAYERS; l++) {
@@ -155,7 +156,7 @@ init:
 
 last_layer:
     for (int c=0; c < NUM_CELLS; c++) {
-#pragma HLS PIPELINE II=1 // Unclear if this can be unrolled; Vitis let me do it, but the logic is sequential and so it probably shouldn't have. Unrolling decreases latency by ~2.
+#pragma HLS PIPELINE II=1 // Unclear if this can be unrolled; Vitis let me do it, but the logic is sequential and so it probably shouldn't have. Unrolling decreases the latency by ~2.
         if (maxima[NUM_LAYERS-1][c]) {
             cluster[NUM_LAYERS-1][c] = nextID;
             nextID++;
@@ -164,10 +165,11 @@ last_layer:
 
 layers:
     for (int l=NUM_LAYERS-2; l>=0; l--) {
-
+// pipelining probably doesn't help here.
 cells:
         for (int cell=0; cell<NUM_CELLS; cell++) {
-#pragma HLS PIPELINE II=1
+#pragma HLS UNROLL // look at unrolling later.
+
             if (!maxima[l][cell])
                 continue;
             
@@ -179,13 +181,11 @@ cells:
 neighbors:
                 for (int k=0; k<MAX_NEIGHBORS_2D; k++) {
 #pragma HLS UNROLL
+
                     int n = neighborArray[cell][k];
-                    if (n == -1)
-                        continue;
-                    if (cluster[l+1][n] != -1) {
+
+                    if (id == -1 && n != -1 && cluster[l+1][n] != -1)
                         id = cluster[l+1][n];
-                        break;
-                    }
                 }
             }
 
@@ -197,4 +197,23 @@ neighbors:
             cluster[l][cell] = id;
         }
     }
+}
+
+void clusterTop(
+    data_t energy[NUM_LAYERS][NUM_CELLS],
+    int cluster[NUM_LAYERS][NUM_CELLS]
+) {
+#pragma HLS ARRAY_PARTITION variable=energy complete dim=2
+#pragma HLS ARRAY_PARTITION variable=cluster complete dim=2
+
+    bool maxima[NUM_LAYERS][NUM_CELLS];
+#pragma HLS ARRAY_PARTITION variable=maxima complete dim=2
+
+layer_loop:
+    for (int l = 0; l < NUM_LAYERS; l++) {
+// look at unrolling later
+        clusterMaxima2d(energy[l], maxima[l]);
+    }
+
+    cluster3d(maxima, cluster);
 }
