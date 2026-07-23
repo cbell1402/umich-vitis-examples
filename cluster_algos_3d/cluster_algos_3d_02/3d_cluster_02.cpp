@@ -151,8 +151,10 @@ void cluster3d(
 #pragma HLS ARRAY_PARTITION variable=cluster complete dim=2
 #pragma HLS ARRAY_PARTITION variable=neighborArray complete dim=2
 
-    cluster_id_t nextLayer[NUM_CELLS];
-#pragma HLS ARRAY_PARTITION variable=nextLayer complete
+    cluster_id_t prevLayer[NUM_CELLS];
+#pragma HLS ARRAY_PARTITION variable=prevLayer complete
+    cluster_id_t currLayer[NUM_CELLS];
+#pragma HLS ARRAY_PARTITION variable=currLayer complete
 
 init:
     for (int l=0; l<NUM_LAYERS; l++) {
@@ -167,12 +169,12 @@ last_layer:
     for (int c=0; c<NUM_CELLS; c++) {
 #pragma HLS UNROLL 
         if (maxima[NUM_LAYERS-1][c]) {
-            nextLayer[c] = c;
+            prevLayer[c] = c;
         } else {
-            nextLayer[c] = INVALID_CLUSTER;
+            prevLayer[c] = INVALID_CLUSTER;
         }
 
-        cluster[NUM_LAYERS-1][c] = nextLayer[c];
+        cluster[NUM_LAYERS-1][c] = prevLayer[c];
     }
 
 layers:
@@ -182,23 +184,23 @@ cells:
         for (int cell=0; cell<NUM_CELLS; cell++) {
 #pragma HLS UNROLL
 
-            if (!maxima[l][cell])
+            if (!maxima[l][cell]) {
+                currLayer[cell] = INVALID_CLUSTER;
+                cluster[l][cell] = INVALID_CLUSTER;
                 continue;
+            }
 
             cluster_id_t candidate[13];
 #pragma HLS ARRAY_PARTITION variable=candidate complete
 
-            candidate[0] = nextLayer[cell];
+            candidate[0] = prevLayer[cell];
 
             for (int k=0; k<MAX_NEIGHBORS_2D; k++) {
 #pragma HLS UNROLL
 
                 int n = neighborArray[cell][k];
 
-                if (n == -1)
-                    candidate[k+1] = INVALID_CLUSTER;
-                else
-                    candidate[k+1] = nextLayer[n];
+                candidate[k+1] = (n == -1) ? INVALID_CLUSTER : prevLayer[n];
             }
 
             cluster_id_t l1[7];
@@ -236,13 +238,14 @@ cluster_stage3:
                 id = cluster_id_t(l * NUM_CELLS + cell);
             }
 
+            currLayer[cell] = id;
             cluster[l][cell] = id;
         }
 
 update_next_layer:
         for (int c=0; c<NUM_CELLS; c++) {
 #pragma HLS UNROLL
-            nextLayer[c] = cluster[l][c];
+            prevLayer[c] = currLayer[c];
         }
     }
 }
