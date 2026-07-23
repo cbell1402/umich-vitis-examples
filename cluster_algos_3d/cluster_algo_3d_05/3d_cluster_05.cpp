@@ -149,36 +149,40 @@ void clusterTop(
 #pragma HLS ARRAY_PARTITION variable=energy complete dim=2
 #pragma HLS ARRAY_PARTITION variable=cluster complete dim=2
 
-    bool maxima[NUM_CELLS];
-#pragma HLS ARRAY_PARTITION variable=maxima complete
-
     cluster_id_t prevLayer[NUM_CELLS];
 #pragma HLS ARRAY_PARTITION variable=prevLayer complete
     cluster_id_t currLayer[NUM_CELLS];
 #pragma HLS ARRAY_PARTITION variable=currLayer complete
 
 
-    clusterMaxima2d(
-        energy[NUM_LAYERS-1],
-        maxima
+    {
+        bool maxima[NUM_CELLS];
+#pragma HLS ARRAY_PARTITION variable=maxima complete
+
+        clusterMaxima2d(
+            energy[NUM_LAYERS-1],
+            maxima
     );
 
-
 init_last:
-    for(int c=0;c<NUM_CELLS;c++) {
+        for(int c=0;c<NUM_CELLS;c++) {
 #pragma HLS UNROLL
 
-        if(maxima[c])
-            prevLayer[c] = c;
-        else
-            prevLayer[c] = INVALID_CLUSTER;
+            if(maxima[c])
+                prevLayer[c] = c;
+            else
+                prevLayer[c] = INVALID_CLUSTER;
 
-        cluster[NUM_LAYERS-1][c] = prevLayer[c];
+            cluster[NUM_LAYERS-1][c] = prevLayer[c];
+        }
     }
 
 
 layers:
     for(int l=NUM_LAYERS-2; l>=0; l--) {
+
+        bool maxima[NUM_CELLS];
+#pragma HLS ARRAY_PARTITION variable=maxima complete
 
         clusterMaxima2d(
             energy[l],
