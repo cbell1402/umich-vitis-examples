@@ -1,7 +1,7 @@
 #include "3d_cluster_02.h"
 
 // neighborArray tracks which cells are whose neighbors.
-const int neighborArray[NUM_CELLS][MAX_NEIGHBORS_2D] = {
+static const ap_int<8> neighborArray[NUM_CELLS][MAX_NEIGHBORS_2D] = {
     {1, 4, 5, 6, 9, -1, -1, -1, -1, -1, -1, -1},
     {0, 2, 4, 5, 6, 7, 10, -1, -1, -1, -1, -1},
     {1, 3, 5, 6, 7, 11, 33, -1, -1, -1, -1, -1},
@@ -63,12 +63,12 @@ Candidate2d max2(Candidate2d a, Candidate2d b) {
     return (a.energy >= b.energy) ? a : b;
 }
 
-
 // Creates the 2d clusters in each layer.
 void clusterMaxima2d(
     data_t energy[NUM_CELLS],
     bool maxima[NUM_CELLS]
 ) {
+#pragma HLS INLINE
 #pragma HLS ARRAY_PARTITION variable=energy complete
 #pragma HLS ARRAY_PARTITION variable=maxima complete
 #pragma HLS ARRAY_PARTITION variable=neighborArray complete dim=2
@@ -92,7 +92,7 @@ for_each_cell:
         for (int k=0; k<MAX_NEIGHBORS_2D; k++) {
 #pragma HLS UNROLL
 
-            int n = neighborArray[cell][k];
+            ap_int<8> n = neighborArray[cell][k];
 
             if (n == -1) {
                     c[k+1].energy = -1;
@@ -137,7 +137,7 @@ for_each_cell:
 // Creates the 3d clusters by comparing the local maxima in each layer to those in its neighboring layer, going back to front.
 void cluster3d(
     bool maxima[NUM_LAYERS][NUM_CELLS],
-    int cluster[NUM_LAYERS][NUM_CELLS]
+    cluster_id_t cluster[NUM_LAYERS][NUM_CELLS]
 ) {
 #pragma HLS INLINE
 #pragma HLS ARRAY_PARTITION variable=maxima complete dim=2
@@ -146,52 +146,48 @@ void cluster3d(
 
 init:
     for (int l=0; l<NUM_LAYERS; l++) {
+#pragma HLS UNROLL
         for (int c=0; c<NUM_CELLS; c++) {
-#pragma HLS UNROLL // mess with pragmas later.
-            cluster[l][c] = -1;
+#pragma HLS UNROLL
+            cluster[l][c] = INVALID_CLUSTER;
         }
     }
 
-    int nextID = 0;
-
 last_layer:
-    for (int c=0; c < NUM_CELLS; c++) {
-#pragma HLS PIPELINE II=1 // Unclear if this can be unrolled; Vitis let me do it, but the logic is sequential and so it probably shouldn't have. Unrolling decreases the latency by ~2.
+    for (int c=0; c<NUM_CELLS; c++) {
+#pragma HLS UNROLL 
         if (maxima[NUM_LAYERS-1][c]) {
-            cluster[NUM_LAYERS-1][c] = nextID;
-            nextID++;
+            cluster[NUM_LAYERS-1][c] = c;
         }
     }
 
 layers:
     for (int l=NUM_LAYERS-2; l>=0; l--) {
-// pipelining probably doesn't help here.
 cells:
         for (int cell=0; cell<NUM_CELLS; cell++) {
-#pragma HLS UNROLL // look at unrolling later.
+#pragma HLS UNROLL
 
             if (!maxima[l][cell])
                 continue;
             
-            int id = -1;
+            cluster_id_t id = INVALID_CLUSTER;
 
-            if (cluster[l+1][cell] != -1)
+            if (cluster[l+1][cell] != INVALID_CLUSTER)
                 id = cluster[l+1][cell];
             else {
 neighbors:
                 for (int k=0; k<MAX_NEIGHBORS_2D; k++) {
 #pragma HLS UNROLL
 
-                    int n = neighborArray[cell][k];
+                    ap_int<8> n = neighborArray[cell][k];
 
-                    if (id == -1 && n != -1 && cluster[l+1][n] != -1)
+                    if (id == INVALID_CLUSTER && n != -1 && cluster[l+1][n] != INVALID_CLUSTER)
                         id = cluster[l+1][n];
                 }
             }
 
-            if (id == -1) {
-                id = nextID;
-                nextID++;
+            if (id == INVALID_CLUSTER) {
+                id = cluster_id_t(l * NUM_CELLS + cell);
             }
 
             cluster[l][cell] = id;
@@ -201,7 +197,7 @@ neighbors:
 
 void clusterTop(
     data_t energy[NUM_LAYERS][NUM_CELLS],
-    int cluster[NUM_LAYERS][NUM_CELLS]
+    cluster_id_t cluster[NUM_LAYERS][NUM_CELLS]
 ) {
 #pragma HLS ARRAY_PARTITION variable=energy complete dim=2
 #pragma HLS ARRAY_PARTITION variable=cluster complete dim=2
@@ -211,7 +207,6 @@ void clusterTop(
 
 layer_loop:
     for (int l = 0; l < NUM_LAYERS; l++) {
-// look at unrolling later
         clusterMaxima2d(energy[l], maxima[l]);
     }
 
