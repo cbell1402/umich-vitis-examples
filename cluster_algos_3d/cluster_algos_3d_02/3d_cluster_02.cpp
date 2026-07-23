@@ -63,6 +63,13 @@ Candidate2d max2(Candidate2d a, Candidate2d b) {
     return (a.energy >= b.energy) ? a : b;
 }
 
+cluster_id_t pick(cluster_id_t a, cluster_id_t b) {
+#pragma HLS INLINE
+
+    return (a != INVALID_CLUSTER) ? a : b;
+}
+
+
 // Creates the 2d clusters in each layer.
 void clusterMaxima2d(
     data_t energy[NUM_CELLS],
@@ -169,22 +176,53 @@ cells:
 
             if (!maxima[l][cell])
                 continue;
-            
-            cluster_id_t id = INVALID_CLUSTER;
 
-            if (cluster[l+1][cell] != INVALID_CLUSTER)
-                id = cluster[l+1][cell];
-            else {
-neighbors:
-                for (int k=0; k<MAX_NEIGHBORS_2D; k++) {
+            cluster_id_t candidate[13];
+#pragma HLS ARRAY_PARTITION variable=candidate complete
+
+            candidate[0] = cluster[l+1][cell];
+
+            for (int k=0; k<MAX_NEIGHBORS_2D; k++) {
 #pragma HLS UNROLL
 
-                    ap_int<8> n = neighborArray[cell][k];
+                ap_int<8> n = neighborArray[cell][k];
 
-                    if (id == INVALID_CLUSTER && n != -1 && cluster[l+1][n] != INVALID_CLUSTER)
-                        id = cluster[l+1][n];
-                }
+                if (n == -1)
+                    candidate[k+1] = INVALID_CLUSTER;
+                else
+                    candidate[k+1] = cluster[l+1][n];
             }
+
+            cluster_id_t l1[7];
+#pragma HLS ARRAY_PARTITION variable=l1 complete
+
+cluster_stage1:
+            for (int i=0; i<6; i++) {
+#pragma HLS UNROLL
+                l1[i] = pick(candidate[2*i], candidate[2*i+1]);
+            }
+            l1[6] = candidate[12];
+
+            cluster_id_t l2[4];
+#pragma HLS ARRAY_PARTITION variable=l2 complete
+
+cluster_stage2:
+            for (int i=0; i<3; i++) {
+#pragma HLS UNROLL
+                l2[i] = pick(l1[2*i], l1[2*i+1]);
+            }
+            l2[3] = l1[6];
+
+            cluster_id_t l3[2];
+#pragma HLS ARRAY_PARTITION variable=l3 complete
+
+cluster_stage3:
+            for (int i=0; i<2; i++) {
+#pragma HLS UNROLL
+                l3[i] = pick(l2[2*i], l2[2*i+1]);
+            }
+
+            cluster_id_t id = pick(l3[0], l3[1]);
 
             if (id == INVALID_CLUSTER) {
                 id = cluster_id_t(l * NUM_CELLS + cell);
