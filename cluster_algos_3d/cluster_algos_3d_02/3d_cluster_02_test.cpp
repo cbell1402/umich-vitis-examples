@@ -6,8 +6,7 @@ using namespace std;
 
 int main() {
     data_t energy[NUM_LAYERS][NUM_CELLS];
-    bool maxima[NUM_LAYERS][NUM_CELLS];
-    int cluster[NUM_LAYERS][NUM_CELLS];
+    ap_uint<11> cluster[NUM_LAYERS][NUM_CELLS];
 
     ifstream infile("test_data.txt");
 
@@ -27,23 +26,17 @@ int main() {
 
     infile.close();
 
-    for (int layer = 0; layer < NUM_LAYERS; layer++) {
-        clusterMaxima2d(energy[layer], maxima[layer]);
-    }
-
-    cluster3d(maxima,cluster);
-
-    cout << "Local maxima:\n\n";
+    clusterTop(energy, cluster);
 
     for (int layer = 0; layer < NUM_LAYERS; layer++) {
         cout << "Layer " << layer << "\n";
+
         for (int cell = 0; cell < NUM_CELLS; cell++) {
-            if (maxima[layer][cell]) {
-            cout << "   Cell " << cell
-                << " Cluster = "<< cluster[layer][cell]
-                << "\n";
+            if (cluster[layer][cell] != INVALID_CLUSTER) {
+                cout << "   Cell " << cell << " Cluster = " << cluster[layer][cell] << "\n";
             }
         }
+
         cout << "\n";
     }
 
