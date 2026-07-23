@@ -1,7 +1,7 @@
 #include "3d_cluster_02.h"
 
 // neighborArray tracks which cells are whose neighbors.
-static const ap_int<8> neighborArray[NUM_CELLS][MAX_NEIGHBORS_2D] = {
+static const ap_int<7> neighborArray[NUM_CELLS][MAX_NEIGHBORS_2D] = {
     {1, 4, 5, 6, 9, -1, -1, -1, -1, -1, -1, -1},
     {0, 2, 4, 5, 6, 7, 10, -1, -1, -1, -1, -1},
     {1, 3, 5, 6, 7, 11, 33, -1, -1, -1, -1, -1},
@@ -99,7 +99,7 @@ for_each_cell:
         for (int k=0; k<MAX_NEIGHBORS_2D; k++) {
 #pragma HLS UNROLL
 
-            ap_int<8> n = neighborArray[cell][k];
+            ap_int<7> n = neighborArray[cell][k];
 
             if (n == -1) {
                     c[k+1].energy = -1;
@@ -151,6 +151,9 @@ void cluster3d(
 #pragma HLS ARRAY_PARTITION variable=cluster complete dim=2
 #pragma HLS ARRAY_PARTITION variable=neighborArray complete dim=2
 
+    cluster_id_t nextLayer[NUM_CELLS];
+#pragma HLS ARRAY_PARTITION variable=nextLayer complete
+
 init:
     for (int l=0; l<NUM_LAYERS; l++) {
 #pragma HLS UNROLL
@@ -164,12 +167,17 @@ last_layer:
     for (int c=0; c<NUM_CELLS; c++) {
 #pragma HLS UNROLL 
         if (maxima[NUM_LAYERS-1][c]) {
-            cluster[NUM_LAYERS-1][c] = c;
+            nextLayer[c] = c;
+        } else {
+            nextLayer[c] = INVALID_CLUSTER;
         }
+
+        cluster[NUM_LAYERS-1][c] = nextLayer[c];
     }
 
 layers:
     for (int l=NUM_LAYERS-2; l>=0; l--) {
+
 cells:
         for (int cell=0; cell<NUM_CELLS; cell++) {
 #pragma HLS UNROLL
@@ -180,17 +188,17 @@ cells:
             cluster_id_t candidate[13];
 #pragma HLS ARRAY_PARTITION variable=candidate complete
 
-            candidate[0] = cluster[l+1][cell];
+            candidate[0] = nextLayer[cell];
 
             for (int k=0; k<MAX_NEIGHBORS_2D; k++) {
 #pragma HLS UNROLL
 
-                ap_int<8> n = neighborArray[cell][k];
+                int n = neighborArray[cell][k];
 
                 if (n == -1)
                     candidate[k+1] = INVALID_CLUSTER;
                 else
-                    candidate[k+1] = cluster[l+1][n];
+                    candidate[k+1] = nextLayer[n];
             }
 
             cluster_id_t l1[7];
@@ -230,6 +238,12 @@ cluster_stage3:
 
             cluster[l][cell] = id;
         }
+
+update_next_layer:
+        for (int c=0; c<NUM_CELLS; c++) {
+#pragma HLS UNROLL
+            nextLayer[c] = cluster[l][c];
+        }
     }
 }
 
@@ -243,8 +257,9 @@ void clusterTop(
     bool maxima[NUM_LAYERS][NUM_CELLS];
 #pragma HLS ARRAY_PARTITION variable=maxima complete dim=2
 
-layer_loop:
+maxima:
     for (int l = 0; l < NUM_LAYERS; l++) {
+#pragma HLS PIPELINE II=1
         clusterMaxima2d(energy[l], maxima[l]);
     }
 
