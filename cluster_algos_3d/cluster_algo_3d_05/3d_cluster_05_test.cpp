@@ -6,7 +6,7 @@ using namespace std;
 
 int main() {
     data_t energy[NUM_LAYERS][NUM_CELLS];
-    ap_uint<11> cluster[NUM_LAYERS][NUM_CELLS];
+    cluster_id_t cluster[NUM_LAYERS][NUM_CELLS];
 
     ifstream infile("test_data.txt");
 
