@@ -29,15 +29,10 @@ Candidate2d max2(Candidate2d a, Candidate2d b);
 
 cluster_id_t pick(cluster_id_t a, cluster_id_t b);
 
-void cluster3d(
-    bool maxima[NUM_LAYERS][NUM_CELLS],
-    ap_uint<11> cluster[NUM_LAYERS][NUM_CELLS]
-);
-
 // Top function
 void clusterTop(
     data_t energy[NUM_LAYERS][NUM_CELLS],
-    ap_uint<11> cluster[NUM_LAYERS][NUM_CELLS]
+    cluster_id_t cluster[NUM_LAYERS][NUM_CELLS]
 );
 
 #endif
