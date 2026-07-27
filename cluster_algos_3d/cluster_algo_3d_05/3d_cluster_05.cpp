@@ -154,7 +154,6 @@ void clusterTop(
     cluster_id_t currLayer[NUM_CELLS];
 #pragma HLS ARRAY_PARTITION variable=currLayer complete
 
-
     {
         bool maxima[NUM_CELLS];
 #pragma HLS ARRAY_PARTITION variable=maxima complete
@@ -177,7 +176,6 @@ init_last:
         }
     }
 
-
 layers:
     for(int l=NUM_LAYERS-2; l>=0; l--) {
 
@@ -189,25 +187,20 @@ layers:
             maxima
         );
 
-
 cells:
         for(int cell=0; cell<NUM_CELLS; cell++) {
 #pragma HLS UNROLL
 
             if(!maxima[cell]) {
-
                 cluster[l][cell] = INVALID_CLUSTER;
                 currLayer[cell] = INVALID_CLUSTER;
                 continue;
             }
 
-
             cluster_id_t candidate[13];
 #pragma HLS ARRAY_PARTITION variable=candidate complete
 
-
             candidate[0] = prevLayer[cell];
-
 
 neighbors:
             for(int k=0;k<MAX_NEIGHBORS_2D;k++) {
@@ -221,50 +214,35 @@ neighbors:
                     : prevLayer[n];
             }
 
-
             cluster_id_t l1[7];
 #pragma HLS ARRAY_PARTITION variable=l1 complete
-
             for(int i=0;i<6;i++) {
 #pragma HLS UNROLL
-                l1[i] =
-                    pick(candidate[2*i],
-                         candidate[2*i+1]);
+                l1[i] = pick(candidate[2*i], candidate[2*i+1]);
             }
-
             l1[6]=candidate[12];
 
 
             cluster_id_t l2[4];
 #pragma HLS ARRAY_PARTITION variable=l2 complete
-
             for(int i=0;i<3;i++) {
 #pragma HLS UNROLL
-                l2[i] =
-                    pick(l1[2*i],
-                         l1[2*i+1]);
+                l2[i] = pick(l1[2*i], l1[2*i+1]);
             }
-
             l2[3]=l1[6];
-
 
             cluster_id_t l3[2];
 #pragma HLS ARRAY_PARTITION variable=l3 complete
-
             l3[0]=pick(l2[0],l2[1]);
             l3[1]=pick(l2[2],l2[3]);
-
 
             cluster_id_t id =
                 pick(l3[0],l3[1]);
 
-
             if(id==INVALID_CLUSTER)
                 id = cluster_id_t(l*NUM_CELLS+cell);
 
-
             cluster[l][cell]=id;
-
             currLayer[cell]=id;
         }
 
