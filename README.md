@@ -2,7 +2,7 @@
 
 <pre>Currently in use:
 
-
+_Useful_Python_Stuff_: Stores some misc python scripts used for analyzing code, making graphs or organizing it to be used in Vitis.
 _addition_algos_: Stores the HLS 48 cell addition code.
 _cluster_algos_: Stores the HLS 2d clustering algorithms.
 _cluster_algos_3d_: Stores the HLS 3d clustering algorithms.
