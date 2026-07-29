@@ -477,10 +477,20 @@ void copyEnergy(
     data_t energyDown[NUM_LAYERS][NUM_CELLS],
     data_t energyUp[NUM_LAYERS][NUM_CELLS]
 ) {
-#pragma HLS INLINE
+#pragma HLS INLINE off
 
-copy_energy:
-    for (int l=0; l<NUM_LAYERS; l++) {
+copy_energy_up:
+    for (int l=NUM_LAYERS/2; l<NUM_LAYERS; l++) {
+#pragma HLS UNROLL
+        for (int c=0; c<NUM_CELLS; c++) {
+#pragma HLS UNROLL
+            energyDown[l][c] = energy[l][c];
+            energyUp[l][c] = energy[l][c];
+        }
+    }
+
+copy_energy_down:
+    for (int l=(NUM_LAYERS/2)-1; l>= 0; l--) {
 #pragma HLS UNROLL
         for (int c=0; c<NUM_CELLS; c++) {
 #pragma HLS UNROLL
@@ -532,13 +542,13 @@ init_middle:
         }
     }
 
+#pragma HLS DATAFLOW
+
     copyEnergy(
         energy,
         energyDown,
         energyUp
     );
-
-#pragma HLS DATAFLOW
 
     propagateDown(
         energyDown,
