@@ -1,4 +1,4 @@
-#include "3d_cluster_05.h"
+#include "3d_cluster_06.h"
 
 // neighborArray tracks which cells are whose neighbors.
 static const ap_int<7> neighborArray[NUM_CELLS][MAX_NEIGHBORS_2D] = {
