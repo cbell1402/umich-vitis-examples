@@ -33,7 +33,9 @@ int main() {
 
         for (int cell = 0; cell < NUM_CELLS; cell++) {
             if (cluster[layer][cell] != INVALID_CLUSTER) {
-                cout << "   Cell " << cell << " Cluster = " << cluster[layer][cell] << "\n";
+                int clusterLayer = cluster[layer][cell] / 48;
+                int clusterCell = cluster[layer][cell] % 48;
+                cout << "   Cell " << cell << " Cluster = " << cluster[layer][cell] << "    (" << clusterLayer << ", " << clusterCell << ")\n";
             }
         }
 
